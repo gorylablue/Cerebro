@@ -434,11 +434,18 @@ function buildScene(sum) {
   uniZone(items);
   items.sort((a, b) => a.d - b.d);
   const body = items.map((it) => `<g data-zone="${it.z}">${it.s}</g>`).join('');
+  // Capa táctil invisible encima de todo: cualquier punto de un ala (piso, pared, muebles,
+  // personajes o pasillos) abre su departamento.
+  const hit = (z, pts) => `<polygon class="hit" data-zone="${z}" fill="transparent" points="${pts.map((p) => P(...p).map(r1).join(',')).join(' ')}"/>`;
+  const hits = hit('mapa', [[0, 255, HW], [0, 1000, HW], [0, 1000, 0], [745, 1000, 0], [0, 255, 0]])
+    + hit('uni', [[255, 0, HW], [1000, 0, HW], [1000, 0, 0], [1000, 745, 0], [255, 0, 0]])
+    + hit('trading', [[0, 0, HW], [255, 0, HW], [255, 0, 0], [1000, 745, 0], [1000, 1000, 0], [745, 1000, 0], [0, 255, 0], [0, 255, HW]]);
   return `${DEFS}
     <rect x="${VB.x}" y="${VB.y}" width="${VB.w}" height="${VB.h}" fill="url(#gVignette)" opacity=".6"/>
     ${floor()}
     ${walls(sum)}
-    ${body}`;
+    ${body}
+    <g class="hit-layer">${hits}</g>`;
 }
 
 // ---------- API pública ----------

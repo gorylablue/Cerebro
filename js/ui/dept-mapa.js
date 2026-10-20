@@ -283,8 +283,6 @@ function renderContent(el) {
 
 export function mapaTabs() {
   return [
-    { id: 'web', label: 'Página web', render: renderWeb },
-    { id: 'aprendizaje', label: 'Aprendizaje', render: renderLearning },
     { id: 'contenido', label: 'Contenido y redes', render: renderContent },
   ];
 }

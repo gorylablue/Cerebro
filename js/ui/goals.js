@@ -2,7 +2,7 @@
 
 import * as store from '../data/store.js';
 import { DEPTS, DEPT_IDS, GENERAL, dept, PRIORITIES, PRIORITY_RANK, STATUSES, statusLabel } from '../config.js';
-import { esc, dueLabel, dueClass } from '../logic/util.js';
+import { esc, dueLabel, dueClass, fmtClock } from '../logic/util.js';
 import { openEditor, withSave, icon, emptyState } from './components.js';
 
 export const GOAL_FIELDS = [
@@ -13,6 +13,7 @@ export const GOAL_FIELDS = [
   { name: 'status', label: 'Estado', type: 'segmented', options: STATUSES },
   { name: 'nextAction', label: 'Próxima acción', type: 'text', wide: true, placeholder: '¿Qué es lo siguiente que tienes que hacer?' },
   { name: 'due', label: 'Fecha límite (opcional)', type: 'date' },
+  { name: 'dueTime', label: 'Hora (opcional)', type: 'time' },
   { name: 'notes', label: 'Notas (opcional)', type: 'textarea', wide: true },
 ];
 
@@ -64,7 +65,7 @@ function goalItem(g) {
       <span class="goal-meta"><span class="dot"></span>${esc(d.name)}${g.status === 'progreso' ? '<span class="chip chip-prog">En progreso</span>' : ''}${g.priority === 'alta' && !done ? '<span class="chip chip-high">Alta</span>' : ''}</span>
       <span class="goal-title">${esc(g.title)}</span>
       ${g.nextAction && !done ? `<span class="goal-next">→ ${esc(g.nextAction)}</span>` : ''}
-      ${g.due && !done ? `<span class="goal-due ${dueClass(g.due)}">${esc(dueLabel(g.due))}</span>` : ''}
+      ${g.due && !done ? `<span class="goal-due ${dueClass(g.due)}">${esc(dueLabel(g.due))}${g.dueTime ? ` · ${esc(fmtClock(g.dueTime))}` : ''}</span>` : ''}
     </button>
   </li>`;
 }

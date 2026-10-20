@@ -707,3 +707,6 @@ body.panel-open .hud, body.panel-open .phone-depts { opacity: 0; visibility: hid
   body.panel-open .floor { inset: 0; }
   body.panel-open .hud, body.panel-open .phone-depts { position: absolute; }
 }
+
+.office .hit { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.office .hit:active { fill: rgba(255, 255, 255, .04); }

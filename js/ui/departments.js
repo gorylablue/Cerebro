@@ -14,7 +14,7 @@ import { uniTabs } from './dept-uni.js';
 function overviewTab(id) {
   return {
     id: 'resumen',
-    label: 'Objetivos y updates',
+    label: 'Objetivos',
     render(el) {
       const ups = updatesSorted((u) => u.dept === id).slice(0, 40);
       el.innerHTML = `<div class="dept-grid">
@@ -35,7 +35,7 @@ const TABS = { trading: tradingTabs, mapa: mapaTabs, uni: uniTabs };
 
 export function renderDept(view, id, tabId) {
   const d = DEPTS[id];
-  const tabs = [...TABS[id](), overviewTab(id)];
+  const tabs = id === 'trading' ? [...TABS[id](), overviewTab(id)] : [overviewTab(id), ...TABS[id]()];
   const active = tabs.find((t) => t.id === tabId) || tabs[0];
   view.innerHTML = `
     <div class="page page-dept" style="--dc:${d.color}">

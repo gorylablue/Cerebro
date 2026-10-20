@@ -158,7 +158,6 @@ function renderCourses(el) {
 
 export function uniTabs() {
   return [
-    { id: 'asignaciones', label: 'Asignaciones', render: renderAssignments },
-    { id: 'cursos', label: 'Cursos', render: renderCourses },
+
   ];
 }

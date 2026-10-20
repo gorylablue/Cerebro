@@ -117,3 +117,10 @@ export function relativeTime(iso) {
 export function normalize(s) {
   return String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
+
+// "14:30" → "2:30 p. m."
+export function fmtClock(hhmm) {
+  const [h, m] = String(hhmm || '').split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return '';
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString(LOCALE, { hour: 'numeric', minute: '2-digit' });
+}

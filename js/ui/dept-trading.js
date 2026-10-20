@@ -131,10 +131,16 @@ function renderJournal(el) {
   const list = filterTrades(all).sort((a, b) => (tradeDate(b) || '').localeCompare(tradeDate(a) || ''));
   const sel = (key, label, opts) => `<label class="mini-field"><span>${label}</span><select data-jf="${key}"><option value="">Todos</option>${opts.map((o) => `<option value="${esc(o.value ?? o)}" ${String(jf[key]) === String(o.value ?? o) ? 'selected' : ''}>${esc(o.label ?? o)}</option>`).join('')}</select></label>`;
   const active = Object.values(jf).some(Boolean);
+  const open = all.filter((t) => t.status === 'abierta').sort((a, b) => (b.openedAt || '').localeCompare(a.openedAt || ''));
   el.innerHTML = `
+    <section class="card open-block">
+      <h2>Operaciones abiertas <span class="muted">(${open.length})</span></h2>
+      ${open.length ? `<ul class="trade-list">${open.map(tradeRow).join('')}</ul>` : '<p class="muted">No tienes operaciones abiertas.</p>'}
+    </section>
     <div class="toolbar">
       <button class="btn btn-primary btn-lg" data-new-trade>${icon('plus')} Registrar operación</button>
     </div>
+    ${all.length ? `<h3 class="section-title">Historial</h3>` : ''}
     ${all.length ? `<div class="filter-grid">
       <label class="mini-field"><span>Desde</span><input type="date" data-jf="from" value="${esc(jf.from)}"></label>
       <label class="mini-field"><span>Hasta</span><input type="date" data-jf="to" value="${esc(jf.to)}"></label>

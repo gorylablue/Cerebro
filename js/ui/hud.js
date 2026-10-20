@@ -7,7 +7,7 @@ import { openTradeEditor } from './dept-trading.js';
 import { openGoalEditor, toggleGoal } from './goals.js';
 import { topPendingGoals } from '../logic/goals.js';
 import { dept } from '../config.js';
-import { dueLabel, dueClass } from '../logic/util.js';
+import { dueLabel, dueClass, fmtClock } from '../logic/util.js';
 
 // ---------- Objetivos pendientes (máximo tres, por prioridad) ----------
 const PRIO_LABEL = { alta: 'Alta', media: 'Media', baja: 'Baja' };
@@ -27,7 +27,7 @@ export function renderPendingGoals(el, { onShowAll } = {}) {
           <span class="pg-meta"><span class="pg-prio">${PRIO_LABEL[g.priority] || 'Media'}</span><span class="pg-dept"><i></i>${esc(d.name)}</span>${g.status === 'progreso' ? '<span class="pg-prog">En progreso</span>' : ''}</span>
           <span class="pg-title">${esc(g.title)}</span>
           ${g.nextAction ? `<span class="pg-next">→ ${esc(g.nextAction)}</span>` : ''}
-          ${g.due ? `<span class="pg-due ${dueClass(g.due)}">${esc(dueLabel(g.due))}</span>` : ''}
+          ${g.due ? `<span class="pg-due ${dueClass(g.due)}">${esc(dueLabel(g.due))}${g.dueTime ? ` · ${esc(fmtClock(g.dueTime))}` : ''}</span>` : ''}
         </button>
       </li>`;
     }).join('')}</ul>
