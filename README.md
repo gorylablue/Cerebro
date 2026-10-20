@@ -14,7 +14,7 @@ Es una aplicación web pensada primero para iPad, que se instala en la pantalla 
 
 | Área | Funciones |
 |---|---|
-| Pantalla principal | Trading floor animado con datos reales en cada zona, panel de prioridades, resumen del día |
+| Pantalla principal | Trading floor isométrico animado (estaciones circulares, En El Mapa y Universidad), pantallas LED y etiquetas con datos reales, panel de operaciones abiertas, calendario económico de TradingView, prioridades en un panel plegable |
 | Objetivos | Crear, editar, completar y eliminar; prioridad, estado, fecha límite, próxima acción y notas |
 | UPDATE | Registro rápido con departamento, tipo opcional y vínculo opcional a un objetivo |
 | Daily Log | Historial por días, búsqueda por palabras y filtros por departamento y fecha |
@@ -49,6 +49,8 @@ js/logic/               LÓGICA: cálculos sin interfaz (se pueden probar y reut
   summary.js            Resúmenes para la oficina
   util.js               Fechas y texto
 js/ui/                  INTERFAZ: pantallas y componentes
+  office.js             La escena isométrica del trading floor (SVG generado en código)
+  hud.js                Paneles de operaciones abiertas y calendario económico
 tests/trading.test.js   Pruebas de los cálculos (node tests/trading.test.js)
 sw.js                   Copia de la app para abrir sin conexión
 ```
@@ -59,6 +61,13 @@ sw.js                   Copia de la app para abrir sin conexión
 - **Colores generales y tamaños:** las variables `--...` al principio de `css/app.css`.
 - **Opciones de formularios** (plataformas, tipos de contenido, emociones…): las listas al principio de `js/ui/dept-*.js`.
 - **Si cambias archivos, sube el número de `CACHE` en `sw.js`** (por ejemplo `cerebro-v3` → `cerebro-v4`). Así la app instalada descarga la versión nueva.
+
+## Calendario económico
+
+- Se usa el widget oficial y gratuito de TradingView.
+- La app no recibe esos datos: TradingView los muestra dentro de su propio recuadro, que necesita internet.
+- Las monedas se sugieren a partir de los instrumentos del diario y se pueden cambiar en el lápiz del panel.
+- La API de Myfxbook no ofrece el calendario, por eso no se usa.
 
 ## Almacenamiento: decisión y límites
 

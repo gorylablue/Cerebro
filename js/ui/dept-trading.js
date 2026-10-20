@@ -46,7 +46,7 @@ function tradeFields() {
   ];
 }
 
-export function openTradeEditor(trade = null) {
+export function openTradeEditor(trade = null, extraDefaults = {}) {
   const fields = tradeFields();
   return openEditor({
     store: 'trades',
@@ -54,7 +54,7 @@ export function openTradeEditor(trade = null) {
     size: 'wide',
     fields: fields.filter((f) => f.type !== 'calc'),
     record: trade,
-    defaults: { openedAt: new Date().toISOString(), direction: 'compra', status: 'cerrada', rulesFollowed: '' },
+    defaults: { openedAt: new Date().toISOString(), direction: 'compra', status: 'cerrada', rulesFollowed: '', ...extraDefaults },
     transform: (v) => ({ ...v, instrument: (v.instrument || '').toUpperCase() }),
     validate: (v) => {
       if (v.riskAmount !== null && v.riskAmount < 0) return 'El riesgo monetario no puede ser negativo.';
