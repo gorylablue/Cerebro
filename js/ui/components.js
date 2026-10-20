@@ -113,7 +113,8 @@ export function fieldHtml(f, value) {
       input = `<input type="number" inputmode="decimal" step="${f.step || 'any'}" id="${id}" name="${f.name}" value="${v === null ? '' : esc(v)}" ${ph} ${req}>`;
       break;
     default:
-      input = `<input type="${f.type || 'text'}" id="${id}" name="${f.name}" value="${esc(v)}" ${ph} ${req} ${f.type === 'url' ? 'inputmode="url" autocapitalize="off"' : ''}>`;
+      input = `<input type="${f.type || 'text'}" id="${id}" name="${f.name}" value="${esc(v)}" ${ph} ${req} ${f.type === 'url' ? 'inputmode="url" autocapitalize="off"' : ''} ${f.datalist ? `list="${id}-list" autocomplete="off"` : ''}>`
+        + (f.datalist ? `<datalist id="${id}-list">${f.datalist.map((o) => `<option value="${esc(o)}"></option>`).join('')}</datalist>` : '');
   }
   const label = f.type === 'checkbox' ? `<span class="label">${esc(f.label)}</span>` : `<label class="label" for="${id}">${esc(f.label)}${f.required ? ' <span class="req">*</span>' : ''}</label>`;
   return `<div class="field ${f.wide ? 'wide' : ''} ${f.half ? 'half' : ''}" data-field="${f.name}">
@@ -158,7 +159,7 @@ export function readForm(form, fields) {
 
 // ---------- Editor genérico de registros ----------
 // Abre un formulario para crear o editar un registro de cualquier tabla.
-export function openEditor({ store: storeName, title, fields, record = null, defaults = {}, validate, transform, onSaved, okMessage = 'Guardado', deleteMessage = '¿Eliminar este registro? Esta acción no se puede deshacer.', size }) {
+export function openEditor({ store: storeName, title, fields, record = null, defaults = {}, validate, transform, onSaved, onReady, okMessage = 'Guardado', deleteMessage = '¿Eliminar este registro? Esta acción no se puede deshacer.', size }) {
   const isNew = !record?.id;
   const data = { ...defaults, ...(record || {}) };
   const form = document.createElement('form');
@@ -172,6 +173,7 @@ export function openEditor({ store: storeName, title, fields, record = null, def
     <button type="button" class="btn btn-primary" data-save>Guardar</button>`;
   const m = openModal({ title, body: form, footer, size });
   wireSegmented(form);
+  onReady?.(form, () => readForm(form, fields));
   const errEl = form.querySelector('.form-error');
   const saveBtn = m.el.querySelector('[data-save]');
 
