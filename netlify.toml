@@ -1,0 +1,15 @@
+# Netlify publica la carpeta tal cual: no hay paso de compilación.
+[build]
+  publish = "."
+  command = ""
+
+# El service worker y el HTML siempre se revisan para que las actualizaciones lleguen rápido.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

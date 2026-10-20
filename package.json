@@ -1,0 +1,9 @@
+{
+  "name": "el-cerebro",
+  "private": true,
+  "type": "module",
+  "description": "El Cerebro: centro de operaciones personal. Sitio estático sin paso de compilación.",
+  "scripts": {
+    "test": "node tests/trading.test.js"
+  }
+}
