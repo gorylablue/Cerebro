@@ -18,6 +18,7 @@ import { renderOffice, updateOffice, placeLabels, pingZone, cameraTo, refitCamer
 import { renderDept } from './ui/departments.js';
 import { renderOpenTrades, tickOpenTrades, renderCalendar, renderPendingGoals } from './ui/hud.js';
 import { openTradeEditor } from './ui/dept-trading.js';
+import { applyPacks } from './data/seed.js';
 
 const view = document.getElementById('view');
 const topbar = document.getElementById('topbar');
@@ -260,6 +261,11 @@ async function boot() {
     renderTopbar();
     if (drawerOpen()) renderGoalList(drawer.querySelector('.drawer-body'));
   });
+
+  // Objetivos preparados fuera de la app (js/data/seed.js). Se añaden una sola vez.
+  applyPacks()
+    .then((n) => { if (n) toast(`${n} objetivos nuevos en En El Mapa`); })
+    .catch((err) => { console.error(err); toast('No se pudieron añadir los objetivos nuevos', 'error'); });
   window.addEventListener('hashchange', route);
   window.addEventListener('cerebro:update-saved', (e) => pingZone(floor, e.detail.dept));
   window.addEventListener('online', () => { const c = document.getElementById('hud-cal'); if (c?.querySelector('.hud-empty')) renderCalendar(c); });

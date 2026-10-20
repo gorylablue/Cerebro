@@ -44,6 +44,7 @@ js/data/                ACCESO A DATOS: el único lugar que toca el almacenamien
   db.js                 IndexedDB (tablas)
   store.js              Guardar, leer, borrar y avisar a la interfaz
   backup.js             Exportar e importar respaldos
+  seed.js               Paquetes de objetivos preparados fuera de la app (se añaden una sola vez)
 js/logic/               LÓGICA: cálculos sin interfaz (se pueden probar y reutilizar)
   trading.js            Definiciones y estadísticas de trading
   summary.js            Resúmenes para la oficina
