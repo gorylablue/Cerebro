@@ -489,3 +489,5 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
   .course-grid, .note-grid { grid-template-columns: 1fr; }
   .hist-date { width: 70px; }
 }
+.form-grid > .form-section:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.course .panel-head h2 { text-transform: none; letter-spacing: 0; font-size: 17px; color: var(--text); font-weight: 700; }

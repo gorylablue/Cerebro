@@ -60,6 +60,9 @@ function station(x, y, w, { screens = 2, colors, occupied, shirt, r, animIdx }) 
   return out;
 }
 
+// Recorta un texto para que no choque con el botón «Entrar».
+const fit = (t, max) => (t.length > max ? `${t.slice(0, Math.max(10, Math.floor(max) - 1))}…` : t);
+
 // ---------- Zonas ----------
 function zoneFrame(id, z, s) {
   const d = DEPTS[id];
@@ -69,7 +72,7 @@ function zoneFrame(id, z, s) {
     <rect x="${z.x + 1}" y="${z.y + 1}" width="${z.w - 2}" height="${z.h - 2}" rx="19" fill="none" stroke="${d.color}" stroke-opacity=".28" stroke-width="2" class="zone-edge"/>
     <g class="plaque">
       <text x="${z.x + 22}" y="${z.y + 36}" class="z-name" fill="#eef2f8">${esc(d.name)}</text>
-      <text x="${z.x + 22}" y="${z.y + 58}" class="z-line">${esc(s?.line || '')}</text>
+      <text x="${z.x + 22}" y="${z.y + 58}" class="z-line">${esc(fit(s?.line || '', (z.w - 150) / 7))}</text>
       <g transform="translate(${z.x + z.w - 96} ${z.y + 18})" class="z-enter">
         <rect width="78" height="30" rx="15" fill="${d.color}" fill-opacity=".14" stroke="${d.color}" stroke-opacity=".5"/>
         <text x="39" y="20" text-anchor="middle" fill="${d.color}">Entrar ›</text>

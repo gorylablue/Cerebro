@@ -66,7 +66,7 @@ function row(a, { showCourse = true } = {}) {
     <button class="goal-main" data-a="${esc(a.id)}">
       <span class="goal-meta">${esc(kindLabel(a.kind))}${showCourse ? ` · ${esc(courseName(a.courseId))}` : ''}${a.status === 'progreso' ? '<span class="chip chip-prog">En progreso</span>' : ''}${a.priority === 'alta' && !done ? '<span class="chip chip-high">Alta</span>' : ''}</span>
       <span class="goal-title">${esc(a.title)}</span>
-      ${a.due && !done ? `<span class="goal-due ${dueClass(a.due)}">${esc(dueLabel(a.due))} · ${esc(fmtDay(a.due, { weekday: 'short', day: 'numeric', month: 'short' }))}</span>` : ''}
+      ${a.due && !done ? `<span class="goal-due ${dueClass(a.due)}">${daysUntil(a.due) <= 7 ? `${esc(dueLabel(a.due))} · ` : ''}${esc(fmtDay(a.due, { weekday: 'short', day: 'numeric', month: 'short' }))}</span>` : ''}
     </button>
   </li>`;
 }
