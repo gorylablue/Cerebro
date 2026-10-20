@@ -2,8 +2,44 @@
 
 import * as store from '../data/store.js';
 import { esc, fmtDateTime } from '../logic/util.js';
-import { icon, withSave } from './components.js';
+import { icon, withSave, emptyState } from './components.js';
 import { openTradeEditor } from './dept-trading.js';
+import { openGoalEditor, toggleGoal } from './goals.js';
+import { topPendingGoals } from '../logic/goals.js';
+import { dept } from '../config.js';
+import { dueLabel, dueClass } from '../logic/util.js';
+
+// ---------- Objetivos pendientes (máximo tres, por prioridad) ----------
+const PRIO_LABEL = { alta: 'Alta', media: 'Media', baja: 'Baja' };
+export function renderPendingGoals(el, { onShowAll } = {}) {
+  const all = store.list('goals').filter((g) => g.status !== 'completado');
+  const top = topPendingGoals(store.list('goals'), 3);
+  el.innerHTML = `
+    <header class="hud-head">
+      <span class="hud-title"><i class="hud-dot" style="--c:#86a9ff"></i>Objetivos pendientes</span>
+      <span class="hud-count hud-count-blue">${all.length}</span>
+    </header>
+    ${top.length ? `<ul class="pg-list">${top.map((g) => {
+      const d = dept(g.dept);
+      return `<li class="pg-item p-${esc(g.priority || 'media')}" style="--dc:${d.color}">
+        <button class="pg-check" data-pg-toggle="${esc(g.id)}" aria-label="Marcar «${esc(g.title)}» como completado"></button>
+        <button class="pg-main" data-pg="${esc(g.id)}">
+          <span class="pg-meta"><span class="pg-prio">${PRIO_LABEL[g.priority] || 'Media'}</span><span class="pg-dept"><i></i>${esc(d.name)}</span>${g.status === 'progreso' ? '<span class="pg-prog">En progreso</span>' : ''}</span>
+          <span class="pg-title">${esc(g.title)}</span>
+          ${g.nextAction ? `<span class="pg-next">→ ${esc(g.nextAction)}</span>` : ''}
+          ${g.due ? `<span class="pg-due ${dueClass(g.due)}">${esc(dueLabel(g.due))}</span>` : ''}
+        </button>
+      </li>`;
+    }).join('')}</ul>
+    ${all.length > top.length ? `<button class="hud-more" data-pg-all>Ver los ${all.length} objetivos</button>` : ''}`
+    : `<div class="hud-empty"><p>No tienes objetivos pendientes.</p><button class="btn btn-small" data-pg-new>${icon('plus')} Nuevo objetivo</button></div>`}`;
+  el.querySelectorAll('[data-pg]').forEach((b) => b.onclick = () => openGoalEditor(store.get('goals', b.dataset.pg)));
+  el.querySelectorAll('[data-pg-toggle]').forEach((b) => b.onclick = () => toggleGoal(b.dataset.pgToggle));
+  const more = el.querySelector('[data-pg-all]');
+  if (more) more.onclick = () => onShowAll?.();
+  const nb = el.querySelector('[data-pg-new]');
+  if (nb) nb.onclick = () => openGoalEditor();
+}
 
 // ---------- Operaciones abiertas ----------
 // Solo muestra lo que guardaste en el diario: no hay precios actuales ni ganancias flotantes.
@@ -88,14 +124,16 @@ function prefs() {
 export function calendarConfig(p) {
   const countries = p.currencies.map((c) => CURRENCIES.find(([k]) => k === c)?.[1]).filter(Boolean).join(',');
   return {
-    colorTheme: 'dark', isTransparent: true, width: '100%', height: '100%', locale: 'es',
+    colorTheme: 'dark', isTransparent: false, width: '100%', height: '100%', locale: 'es',
     importanceFilter: IMPACTS[p.impact]?.filter || '1', countryFilter: countries || 'us',
   };
 }
 
 let calOpen = null;
+let prefsOpen = false;
 export function renderCalendar(el, { startOpen = false } = {}) {
   if (calOpen === null) calOpen = startOpen;
+  el.classList.toggle('expanded', !!calOpen);
   const p = prefs();
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
   el.innerHTML = `
@@ -108,7 +146,7 @@ export function renderCalendar(el, { startOpen = false } = {}) {
       <button class="icon-btn" data-cal-toggle aria-label="${calOpen ? 'Ocultar' : 'Mostrar'} calendario">${icon(calOpen ? 'x' : 'chevron')}</button>
     </header>
     ${calOpen ? `
-      <div class="cal-prefs" hidden>
+      <div class="cal-prefs" ${prefsOpen ? '' : 'hidden'}>
         <p class="hud-label">Monedas</p>
         <div class="chips">${CURRENCIES.map(([c]) => `<button class="fchip ${p.currencies.includes(c) ? 'on' : ''}" data-cur="${c}">${c}</button>`).join('')}</div>
         <p class="hud-label">Impacto</p>
@@ -121,7 +159,7 @@ export function renderCalendar(el, { startOpen = false } = {}) {
   el.querySelectorAll('[data-cal-toggle]').forEach((b) => b.onclick = () => { calOpen = !calOpen; renderCalendar(el); });
   if (!calOpen) return;
   const prefsEl = el.querySelector('.cal-prefs');
-  el.querySelector('[data-cal-prefs]').onclick = () => { prefsEl.hidden = !prefsEl.hidden; };
+  el.querySelector('[data-cal-prefs]').onclick = () => { prefsOpen = prefsEl.hidden; prefsEl.hidden = !prefsOpen; };
   const savePrefs = async (next) => {
     if (!next.currencies.length) return;
     if (await withSave(() => store.setMeta('calendarPrefs', { currencies: next.currencies, impact: next.impact }), null)) renderCalendar(el);
@@ -160,8 +198,18 @@ function mountWidget(box, config) {
     if (box.querySelector('iframe')) box.querySelector('.tv-loading')?.remove();
     else if (box.querySelector('.tv-loading')) fail();
   }, 15000);
+  // TradingView no siempre respeta height: 100%; se fija la altura real en píxeles
+  // para que el calendario ocupe todo el recuadro y se actualice al girar el iPad.
+  const fit = () => {
+    const f = box.querySelector('iframe');
+    if (!f) return;
+    const h = `${box.clientHeight}px`;
+    for (let n = f; n && n !== box; n = n.parentElement) n.style.height = h;
+    f.style.width = '100%';
+  };
   const obs = new MutationObserver(() => {
-    if (box.querySelector('iframe')) { box.querySelector('.tv-loading')?.remove(); obs.disconnect(); }
+    if (box.querySelector('iframe')) { box.querySelector('.tv-loading')?.remove(); fit(); obs.disconnect(); }
   });
   obs.observe(box, { childList: true, subtree: true });
+  new ResizeObserver(fit).observe(box);
 }

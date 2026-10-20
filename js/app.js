@@ -1,22 +1,29 @@
-// Punto de entrada: carga los datos, dibuja la barra superior y gestiona la navegación.
+// Punto de entrada: carga los datos, dibuja la oficina y gestiona la navegación.
+//
+// Estructura de la pantalla:
+// - #world: la oficina (escena, etiquetas y paneles HUD). Se dibuja UNA vez y nunca se desmonta.
+// - #panel: panel superpuesto donde se abren los departamentos, el Daily Log y Datos.
+//   Al abrirlo, la cámara se acerca al departamento y la oficina sigue visible detrás.
 
 import * as store from './data/store.js';
-import { DEPTS, DEPT_IDS } from './config.js';
+import { DEPTS, DEPT_IDS, OWNER_NAME } from './config.js';
 import { esc, todayKey, fmtDayLong } from './logic/util.js';
 import { deptSummaries, topSummary } from './logic/summary.js';
-import { icon } from './ui/components.js';
+import { icon, toast } from './ui/components.js';
 import { renderGoalList } from './ui/goals.js';
 import { openUpdate } from './ui/update.js';
 import { renderLog } from './ui/log.js';
 import { renderDataPage, backupAgeDays } from './ui/data-page.js';
-import { renderOffice, updateOffice, placeLabels, pingZone } from './ui/office.js';
+import { renderOffice, updateOffice, placeLabels, pingZone, cameraTo, refitCamera, introCamera } from './ui/office.js';
 import { renderDept } from './ui/departments.js';
-import { renderOpenTrades, tickOpenTrades, renderCalendar } from './ui/hud.js';
+import { renderOpenTrades, tickOpenTrades, renderCalendar, renderPendingGoals } from './ui/hud.js';
 import { openTradeEditor } from './ui/dept-trading.js';
 
 const view = document.getElementById('view');
 const topbar = document.getElementById('topbar');
-let current = { name: '', refresh: null };
+const drawer = document.getElementById('goals-drawer');
+let current = { name: 'home', refresh: null };
+let world, floor, panel, panelBody, panelTitle;
 
 // ---------- Barra superior ----------
 function renderTopbar() {
@@ -26,7 +33,7 @@ function renderTopbar() {
   const needsBackup = hasData && (age === null || age >= 7);
   const date = fmtDayLong(todayKey());
   topbar.innerHTML = `
-    <a class="brand" href="#/" aria-label="El Cerebro, inicio">
+    <a class="brand" href="#/" aria-label="El Cerebro, volver al centro de operaciones">
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
       <span class="brand-text"><strong>El Cerebro</strong><small>${esc(date.charAt(0).toUpperCase() + date.slice(1))}</small></span>
     </a>
@@ -41,88 +48,194 @@ function renderTopbar() {
       <button class="btn btn-update" data-update>${icon('bolt')}<span>UPDATE</span></button>
     </nav>`;
   topbar.querySelector('[data-update]').onclick = () => openUpdate({ deptId: current.dept || null });
-  topbar.querySelector('[data-goals]').onclick = () => toggleGoalsDrawer(true);
+  topbar.querySelector('[data-goals]').onclick = () => setDrawer(true);
 }
 
-// ---------- Panel plegable de objetivos ----------
-const drawer = document.getElementById('goals-drawer');
-function toggleGoalsDrawer(open) {
+// ---------- Prioridades (panel lateral) ----------
+// El panel se crea una vez. Cerrado = oculto de verdad (visibility: hidden), no solo sin toques.
+function buildDrawer() {
+  drawer.innerHTML = `<div class="drawer-scrim" data-close-drawer></div>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="Prioridades">
+      <button class="icon-btn drawer-close" data-close-drawer aria-label="Cerrar prioridades">${icon('x')}</button>
+      <div class="drawer-body"></div>
+    </aside>`;
+  drawer.querySelectorAll('[data-close-drawer]').forEach((b) => b.addEventListener('click', () => setDrawer(false)));
+}
+function setDrawer(open) {
+  if (open) renderGoalList(drawer.querySelector('.drawer-body'));
   drawer.classList.toggle('open', open);
   drawer.setAttribute('aria-hidden', String(!open));
-  if (open) {
-    drawer.innerHTML = `<div class="drawer-scrim" data-close-drawer></div>
-      <aside class="drawer-panel" role="dialog" aria-label="Prioridades">
-        <button class="icon-btn drawer-close" data-close-drawer aria-label="Cerrar">${icon('x')}</button>
-        <div class="drawer-body"></div>
-      </aside>`;
-    renderGoalList(drawer.querySelector('.drawer-body'));
-    drawer.querySelectorAll('[data-close-drawer]').forEach((b) => b.onclick = () => toggleGoalsDrawer(false));
-  }
+  if (open) drawer.querySelector('.drawer-close').focus({ preventScroll: true });
 }
-function refreshDrawer() {
-  if (drawer.classList.contains('open')) renderGoalList(drawer.querySelector('.drawer-body'));
-}
+const drawerOpen = () => drawer.classList.contains('open');
 
-// ---------- Pantalla principal ----------
-// La escena se dibuja una sola vez; al cambiar los datos solo se actualizan textos y paneles,
-// así las animaciones no se reinician y el calendario no se recarga.
-let resizeObs = null;
-let homeTimer = null;
-function renderHome() {
+// ---------- La oficina (persistente) ----------
+let tradesHud, goalsHud;
+function buildWorld() {
   view.innerHTML = `
-    <div class="home">
+    <div class="home" id="world">
       <section class="stage" aria-label="Trading floor"><div class="floor" id="floor"></div></section>
       <nav class="phone-depts" aria-label="Departamentos"></nav>
+      <aside class="hud hud-goals" id="hud-goals" aria-label="Objetivos pendientes"></aside>
       <aside class="hud hud-trades" id="hud-trades" aria-label="Operaciones abiertas"></aside>
       <aside class="hud hud-cal" id="hud-cal" aria-label="Calendario económico"></aside>
-    </div>`;
-  const floor = view.querySelector('#floor');
-  const trades = view.querySelector('#hud-trades');
-  const go = (id) => { location.hash = `#/dept/${id}`; };
-  const sums = deptSummaries();
-  renderOffice(floor, { summaries: sums, onSelect: go });
-  renderCalendar(view.querySelector('#hud-cal'), { startOpen: window.matchMedia('(min-width: 700px) and (orientation: portrait)').matches });
-  const refresh = () => {
-    const s = deptSummaries();
-    updateOffice(floor, s);
-    renderOpenTrades(trades);
-    view.querySelector('.phone-depts').innerHTML = DEPT_IDS.map((id) => `
-      <a class="phone-dept" href="#/dept/${id}" style="--dc:${DEPTS[id].color}">
-        <span class="pd-dot"></span>
-        <span class="pd-text"><strong>${esc(DEPTS[id].name)}</strong><small>${esc(s[id].line)}</small></span>
-        ${icon('chevron')}
-      </a>`).join('');
-  };
-  refresh();
-  resizeObs?.disconnect();
-  resizeObs = new ResizeObserver(() => placeLabels(floor));
-  resizeObs.observe(floor);
-  clearInterval(homeTimer);
-  homeTimer = setInterval(() => tickOpenTrades(trades), 60000);
-  return { refresh };
+    </div>
+    <section class="panel" id="panel" hidden aria-hidden="true">
+      <header class="panel-bar">
+        <button class="panel-back" data-home>${icon('back')}<span>Centro de operaciones</span></button>
+        <span class="panel-title" id="panel-title"></span>
+        <button class="icon-btn panel-close" data-home aria-label="Volver al centro de operaciones">${icon('x')}</button>
+      </header>
+      <div class="panel-body" id="panel-body"></div>
+    </section>`;
+  world = view.querySelector('#world');
+  floor = view.querySelector('#floor');
+  panel = view.querySelector('#panel');
+  panelBody = view.querySelector('#panel-body');
+  panelTitle = view.querySelector('#panel-title');
+  tradesHud = view.querySelector('#hud-trades');
+  goalsHud = view.querySelector('#hud-goals');
+  panel.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', goHome));
+
+  renderOffice(floor, { summaries: deptSummaries(), onSelect: (id) => { location.hash = `#/dept/${id}`; } });
+  renderCalendar(view.querySelector('#hud-cal'), { startOpen: false });
+  refreshWorld();
+
+  let t;
+  new ResizeObserver(() => {
+    clearTimeout(t);
+    t = setTimeout(() => refitCamera(floor, current.name === 'home' ? null : visibleRect()), 60);
+  }).observe(floor);
+  setInterval(() => tickOpenTrades(tradesHud), 60000);
+}
+
+function refreshWorld() {
+  const s = deptSummaries();
+  updateOffice(floor, s);
+  renderOpenTrades(tradesHud);
+  renderPendingGoals(goalsHud, { onShowAll: () => setDrawer(true) });
+  view.querySelector('.phone-depts').innerHTML = DEPT_IDS.map((id) => `
+    <a class="phone-dept" href="#/dept/${id}" style="--dc:${DEPTS[id].color}">
+      <span class="pd-dot"></span>
+      <span class="pd-text"><strong>${esc(DEPTS[id].name)}</strong><small>${esc(s[id].line)}</small></span>
+      ${icon('chevron')}
+    </a>`).join('');
+}
+
+// Zona de la escena que queda visible junto al panel (para centrar ahí el departamento).
+function visibleRect() {
+  const scene = floor.querySelector('.scene');
+  if (!scene || panel.hidden) return null;
+  const sr = scene.getBoundingClientRect();
+  const pr = { left: panel.offsetLeft, top: panel.offsetTop };
+  const vr = view.getBoundingClientRect();
+  const sideBySide = pr.left > sr.width * 0.25;
+  if (sideBySide) return { x: 0, y: 0, w: Math.max(160, vr.left + pr.left - sr.left - 12), h: sr.height };
+  return { x: 0, y: 0, w: sr.width, h: Math.max(120, vr.top + pr.top - sr.top - 8) };
+}
+
+// ---------- Panel de departamento / Daily Log / Datos ----------
+let panelKey = '';
+function openPanel(key, { title, color, deptId }) {
+  const sameKey = !panel.hidden && panel.classList.contains('open') && panelKey === key;
+  panelTitle.innerHTML = title;
+  panel.style.setProperty('--dc', color || 'var(--accent)');
+  document.body.classList.add('panel-open');
+  panel.hidden = false;
+  panel.setAttribute('aria-hidden', 'false');
+  clearTimeout(panel._hideT);
+  panelKey = key;
+  requestAnimationFrame(() => {
+    panel.classList.add('open');
+    if (sameKey) return;
+    world.classList.toggle('dimmed', !deptId);
+    // Espera a que la oficina ocupe su posición de fondo antes de mover la cámara.
+    requestAnimationFrame(() => cameraTo(floor, deptId || 'overview', { vis: visibleRect(), duration: 800 }));
+  });
+}
+
+function closePanel() {
+  if (panel.hidden) return;
+  panel.classList.remove('open');
+  panel.setAttribute('aria-hidden', 'true');
+  world.classList.remove('dimmed');
+  document.body.classList.remove('panel-open');
+  panelKey = '';
+  requestAnimationFrame(() => cameraTo(floor, 'overview', { duration: 700, onDone: () => placeLabels(floor) }));
+  panel._hideT = setTimeout(() => {
+    if (!panel.classList.contains('open')) { panel.hidden = true; panelBody.innerHTML = ''; }
+  }, 450);
+}
+
+function goHome() {
+  if (location.hash && location.hash !== '#/' && location.hash !== '#') location.hash = '#/';
+  else route();
+}
+
+// Si una sección falla al dibujarse, el panel muestra el error y una salida clara.
+function safeRender(fn) {
+  try {
+    return fn() || {};
+  } catch (err) {
+    console.error(err);
+    panelBody.innerHTML = `<div class="page"><div class="fatal-card">
+      <h2>No se pudo abrir esta sección</h2>
+      <p>${esc(err?.message || 'Error desconocido')}</p>
+      <button class="btn btn-primary" data-home-fallback>${icon('back')} Volver al centro de operaciones</button>
+    </div></div>`;
+    panelBody.querySelector('[data-home-fallback]').onclick = goHome;
+    return {};
+  }
 }
 
 // ---------- Navegación ----------
 function route() {
   const hash = location.hash.replace(/^#/, '') || '/';
   const parts = hash.split('/').filter(Boolean);
-  resizeObs?.disconnect();
-  clearInterval(homeTimer);
-  window.scrollTo(0, 0);
-  if (parts[0] === 'log') current = { name: 'log', ...renderLog(view) };
-  else if (parts[0] === 'datos') { renderDataPage(view); current = { name: 'datos', refresh: () => renderDataPage(view) }; }
-  else if (parts[0] === 'dept' && DEPTS[parts[1]]) {
-    current = { name: 'dept', dept: parts[1], ...renderDept(view, parts[1], parts[2]) };
+  const prevDept = current.dept;
+  if (parts[0] === 'log') {
+    openPanel('log', { title: `${icon('log')} Daily Log` });
+    current = { name: 'log', ...safeRender(() => renderLog(panelBody)) };
+    panelBody.scrollTop = 0;
+  } else if (parts[0] === 'datos') {
+    openPanel('datos', { title: `${icon('db')} Datos y respaldo` });
+    safeRender(() => renderDataPage(panelBody));
+    current = { name: 'datos', refresh: () => safeRender(() => renderDataPage(panelBody)) };
+    panelBody.scrollTop = 0;
+  } else if (parts[0] === 'dept' && DEPTS[parts[1]]) {
+    const d = DEPTS[parts[1]];
+    openPanel(`dept-${parts[1]}`, { title: `<i class="pt-dot"></i>${esc(d.name)}`, color: d.color, deptId: parts[1] });
+    current = { name: 'dept', dept: parts[1], ...safeRender(() => renderDept(panelBody, parts[1], parts[2])) };
+    if (prevDept !== parts[1]) panelBody.scrollTop = 0;
     // #/dept/trading/diario/<id> abre directamente la ficha de esa operación (desde el panel de abiertas).
     if (parts[1] === 'trading' && parts[3]) {
       history.replaceState(null, '', `#/dept/trading/${parts[2] || 'diario'}`);
       const t = store.get('trades', parts[3]);
       if (t) openTradeEditor(t);
     }
+  } else {
+    closePanel();
+    current = { name: 'home', refresh: null };
   }
-  else current = { name: 'home', ...renderHome() };
   document.body.dataset.view = current.name;
   renderTopbar();
+}
+
+// ---------- Bienvenida ----------
+function playWelcome() {
+  const el = document.createElement('div');
+  el.className = 'welcome';
+  el.setAttribute('aria-hidden', 'true');
+  const date = fmtDayLong(todayKey());
+  el.innerHTML = `<div class="welcome-inner">
+      <span class="welcome-kicker">Centro de operaciones · en línea</span>
+      <span class="welcome-title">Bienvenido, <b>${esc(OWNER_NAME)}</b></span>
+      <span class="welcome-sub">${esc(date.charAt(0).toUpperCase() + date.slice(1))}</span>
+    </div>`;
+  world.appendChild(el);
+  introCamera(floor, 1800);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('play')));
+  setTimeout(() => el.remove(), 3400);
 }
 
 // ---------- Inicio ----------
@@ -138,25 +251,42 @@ async function boot() {
     return;
   }
 
-  store.subscribe(() => { current.refresh?.(); renderTopbar(); refreshDrawer(); });
-  window.addEventListener('online', () => { const c = document.getElementById('hud-cal'); if (c && c.querySelector('.hud-empty')) renderCalendar(c); });
-  window.addEventListener('hashchange', route);
-  window.addEventListener('cerebro:update-saved', (e) => {
-    const floor = document.getElementById('floor');
-    if (floor) pingZone(floor, e.detail.dept);
-  });
+  buildDrawer();
+  buildWorld();
 
-  // Pausa las animaciones cuando la app no está visible (ahorra batería).
-  const setPaused = () => document.documentElement.classList.toggle('paused', document.hidden);
+  store.subscribe(() => {
+    refreshWorld();
+    current.refresh?.();
+    renderTopbar();
+    if (drawerOpen()) renderGoalList(drawer.querySelector('.drawer-body'));
+  });
+  window.addEventListener('hashchange', route);
+  window.addEventListener('cerebro:update-saved', (e) => pingZone(floor, e.detail.dept));
+  window.addEventListener('online', () => { const c = document.getElementById('hud-cal'); if (c?.querySelector('.hud-empty')) renderCalendar(c); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || document.getElementById('modal-root').children.length) return;
+    if (drawerOpen()) setDrawer(false);
+    else if (current.name !== 'home') goHome();
+  });
+  // Cualquier error inesperado se avisa; la X del panel y el logo siguen llevando a la oficina.
+  window.addEventListener('error', (e) => { console.error(e.error || e.message); toast('Algo falló. Puedes volver al centro de operaciones con el logo o la X.', 'error'); });
+  window.addEventListener('unhandledrejection', (e) => { console.error(e.reason); });
+
+  // Pausa las animaciones solo cuando la app pasa realmente a segundo plano.
+  const setPaused = () => document.documentElement.classList.toggle('paused', document.visibilityState === 'hidden');
   document.addEventListener('visibilitychange', setPaused);
-  setPaused();
+  window.addEventListener('pageshow', () => document.documentElement.classList.remove('paused'));
+  window.addEventListener('focus', () => document.documentElement.classList.remove('paused'));
+  document.documentElement.classList.remove('paused');
 
   // La fecha de la barra superior cambia a medianoche.
   let lastDay = todayKey();
-  setInterval(() => { if (todayKey() !== lastDay) { lastDay = todayKey(); current.refresh?.(); renderTopbar(); } }, 60000);
+  setInterval(() => { if (todayKey() !== lastDay) { lastDay = todayKey(); refreshWorld(); current.refresh?.(); renderTopbar(); } }, 60000);
 
+  const startsHome = !location.hash || location.hash === '#/' || location.hash === '#';
   route();
   document.documentElement.classList.add('ready');
+  if (startsHome) playWelcome();
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('Service worker no registrado', e));

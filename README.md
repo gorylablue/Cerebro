@@ -50,7 +50,7 @@ js/logic/               LÓGICA: cálculos sin interfaz (se pueden probar y reut
   util.js               Fechas y texto
 js/ui/                  INTERFAZ: pantallas y componentes
   office.js             La escena isométrica del trading floor (SVG generado en código)
-  hud.js                Paneles de operaciones abiertas y calendario económico
+  hud.js                Paneles de objetivos pendientes, operaciones abiertas y calendario económico
 tests/trading.test.js   Pruebas de los cálculos (node tests/trading.test.js)
 sw.js                   Copia de la app para abrir sin conexión
 ```
@@ -61,6 +61,13 @@ sw.js                   Copia de la app para abrir sin conexión
 - **Colores generales y tamaños:** las variables `--...` al principio de `css/app.css`.
 - **Opciones de formularios** (plataformas, tipos de contenido, emociones…): las listas al principio de `js/ui/dept-*.js`.
 - **Si cambias archivos, sube el número de `CACHE` en `sw.js`** (por ejemplo `cerebro-v3` → `cerebro-v4`). Así la app instalada descarga la versión nueva.
+
+## Navegación
+
+- La oficina se dibuja una sola vez y nunca se desmonta.
+- Los departamentos, el Daily Log y Datos se abren en un panel encima de la oficina.
+- Al abrir un departamento, la cámara se acerca a su zona cambiando el `viewBox` del SVG, sin capas gigantes en memoria.
+- Para volver hay tres caminos: «Centro de operaciones» o la X del panel, el logo de la barra superior y la tecla Escape.
 
 ## Calendario económico
 

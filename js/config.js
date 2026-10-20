@@ -1,6 +1,9 @@
 // Configuración central: departamentos, estados y listas de opciones.
 // Cambiar un nombre o color aquí lo cambia en toda la app.
 
+// Nombre que aparece en la bienvenida.
+export const OWNER_NAME = 'José';
+
 export const DEPTS = {
   mapa:    { id: 'mapa',    name: 'En El Mapa',  color: '#34d3b4', tint: '#0f2a28' },
   trading: { id: 'trading', name: 'Trading',     color: '#f2b544', tint: '#211d14' },

@@ -443,7 +443,9 @@ function buildScene(sum) {
 
 // ---------- API pública ----------
 // Puntos de anclaje de las etiquetas (en coordenadas del mundo).
-const ANCHORS = { mapa: [0, 760, 330], trading: [0, 0, 264], uni: [760, 0, 330] };
+// Trading arriba, sobre la esquina; En El Mapa y Universidad en el borde delantero de su ala,
+// para dejar libre la esquina superior izquierda (Objetivos pendientes).
+const ANCHORS = { mapa: [110, 1000, 0], trading: [0, 0, 264], uni: [1000, 110, 0] };
 
 function labelHtml(id, s) {
   const d = DEPTS[id];
@@ -468,6 +470,80 @@ export function renderOffice(container, { summaries = {}, onSelect }) {
   container.querySelectorAll('[data-label]').forEach((b) => b.addEventListener('click', () => onSelect?.(b.dataset.label)));
   measureLeds(container);
   placeLabels(container);
+  // Arranque de las animaciones: se activan en el siguiente fotograma, cuando el SVG ya está
+  // pintado. Safari a veces no inicia animaciones de un SVG recién insertado hasta un repintado.
+  svg.getBoundingClientRect();
+  requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.add('live')));
+}
+
+// ---------- Cámara ----------
+// El acercamiento cambia el viewBox del SVG (la escena se vuelve a dibujar en vectores a la
+// nueva escala). Así no se crean capas gigantes en memoria, que en el iPad pueden verse negras.
+const FOCUS = {
+  trading: { cx: 0, cy: 430, w: 560, h: 840 },
+  mapa: { cx: -600, cy: 380, w: 820, h: 620 },
+  uni: { cx: 600, cy: 330, w: 820, h: 660 },
+};
+
+function overviewBox(W, H) {
+  const k = Math.min(W / VB.w, H / VB.h);
+  const w = W / k, h = H / k;
+  return { x: VB.x - (w - VB.w) / 2, y: VB.y - (h - VB.h) / 2, w, h };
+}
+
+function targetBox(target, W, H, vis) {
+  if (!target || target === 'overview') return overviewBox(W, H);
+  const f = typeof target === 'string' ? FOCUS[target] : target;
+  if (!f) return overviewBox(W, H);
+  const v = vis || { x: 0, y: 0, w: W, h: H };
+  const k = Math.min(v.w / f.w, v.h / f.h);
+  return { x: f.cx - (v.x + v.w / 2) / k, y: f.cy - (v.y + v.h / 2) / k, w: W / k, h: H / k };
+}
+
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+// target: 'overview', un id de departamento, o una caja {cx, cy, w, h}. vis: zona visible (px) no tapada por el panel.
+export function cameraTo(container, target, { vis = null, duration = 750, onDone } = {}) {
+  const scene = container.querySelector('.scene');
+  const svg = scene?.querySelector('svg');
+  if (!svg) return;
+  const W = scene.clientWidth, H = scene.clientHeight;
+  if (!W || !H) return;
+  const to = targetBox(target, W, H, vis);
+  const from = svg._cam || overviewBox(W, H);
+  cancelAnimationFrame(svg._camRaf);
+  svg._camTarget = { target, vis };
+  scene.classList.toggle('zoomed', target !== 'overview');
+  const set = (b) => { svg._cam = b; svg.setAttribute('viewBox', `${r1(b.x)} ${r1(b.y)} ${r1(b.w)} ${r1(b.h)}`); };
+  if (!duration || matchMedia('(prefers-reduced-motion: reduce)').matches) { set(to); onDone?.(); return; }
+  const t0 = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - t0) / duration);
+    const e = ease(t);
+    set({ x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, w: from.w + (to.w - from.w) * e, h: from.h + (to.h - from.h) * e });
+    if (t < 1) svg._camRaf = requestAnimationFrame(step);
+    else onDone?.();
+  };
+  svg._camRaf = requestAnimationFrame(step);
+}
+
+// Vuelve a encuadrar sin animación (por ejemplo, al girar el iPad).
+export function refitCamera(container, vis) {
+  const svg = container.querySelector('.scene svg');
+  const t = svg?._camTarget?.target || 'overview';
+  cameraTo(container, t, { vis: vis ?? svg?._camTarget?.vis, duration: 0 });
+  placeLabels(container);
+}
+
+// Acercamiento de entrada para la bienvenida: empieza cerca del centro y se abre a la vista general.
+export function introCamera(container, duration = 1700) {
+  const svg = container.querySelector('.scene svg');
+  if (!svg) return;
+  const scene = container.querySelector('.scene');
+  const ov = overviewBox(scene.clientWidth, scene.clientHeight);
+  svg._cam = { x: ov.x + ov.w * 0.14, y: ov.y + ov.h * 0.16, w: ov.w * 0.72, h: ov.h * 0.72 };
+  svg.setAttribute('viewBox', `${r1(svg._cam.x)} ${r1(svg._cam.y)} ${r1(svg._cam.w)} ${r1(svg._cam.h)}`);
+  cameraTo(container, 'overview', { duration });
 }
 
 function officeTexts(s) {
