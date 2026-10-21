@@ -264,8 +264,8 @@ async function boot() {
 
   // Objetivos preparados fuera de la app (js/data/seed.js). Se añaden una sola vez.
   applyPacks()
-    .then((n) => { if (n) toast(`${n} objetivos nuevos en En El Mapa`); })
-    .catch((err) => { console.error(err); toast('No se pudieron añadir los objetivos nuevos', 'error'); });
+    .then((n) => { if (n) toast(`${n} novedades en En El Mapa`); })
+    .catch((err) => { console.error(err); toast('No se pudieron añadir las novedades', 'error'); });
   window.addEventListener('hashchange', route);
   window.addEventListener('cerebro:update-saved', (e) => pingZone(floor, e.detail.dept));
   window.addEventListener('online', () => { const c = document.getElementById('hud-cal'); if (c?.querySelector('.hud-empty')) renderCalendar(c); });

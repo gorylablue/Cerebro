@@ -2,7 +2,7 @@
 // Estrategia "red primero": con internet siempre carga la versión más reciente;
 // sin internet usa la última copia guardada. Tus DATOS no pasan por aquí (están en IndexedDB).
 
-const CACHE = 'cerebro-v7';
+const CACHE = 'cerebro-v8';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/app.js', './js/config.js',
