@@ -3,6 +3,10 @@
   publish = "."
   command = ""
 
+# Función privada que guarda la copia para la revisión de Claude.
+[functions]
+  directory = "netlify/functions"
+
 # El service worker y el HTML siempre se revisan para que las actualizaciones lleguen rápido.
 [[headers]]
   for = "/sw.js"

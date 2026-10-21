@@ -73,6 +73,13 @@ sw.js                   Copia de la app para abrir sin conexión
 - Al abrir un departamento, la cámara se acerca a su zona cambiando el `viewBox` del SVG, sin capas gigantes en memoria.
 - Para volver hay tres caminos: «Centro de operaciones» o la X del panel, el logo de la barra superior y la tecla Escape.
 
+## Copia privada para la revisión de Claude
+
+- `netlify/functions/sync.mjs` recibe una copia de los datos y la guarda en un repositorio **privado** de GitHub (`datos/cerebro.json`).
+- La función usa tres variables configuradas en Netlify: `CEREBRO_SYNC_KEY`, `GITHUB_TOKEN` y `GITHUB_REPO`.
+- La clave de sincronización se guarda solo en el dispositivo (Datos → Copia privada) y no viaja en los respaldos.
+- Sin cambios no se crea una copia nueva; cada copia queda en el historial del repositorio.
+
 ## Calendario económico
 
 - Se usa el widget oficial y gratuito de TradingView.

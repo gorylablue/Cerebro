@@ -20,6 +20,7 @@ import { renderOpenTrades, tickOpenTrades, renderCalendar, renderPendingGoals } 
 import { openTradeEditor } from './ui/dept-trading.js';
 import { applyPacks } from './data/seed.js';
 import { dismissGesture, clearDrag } from './ui/motion.js';
+import { initSync } from './data/sync.js';
 
 const view = document.getElementById('view');
 const topbar = document.getElementById('topbar');
@@ -272,6 +273,7 @@ async function boot() {
 
   buildDrawer();
   buildWorld();
+  initSync((msg) => toast(msg, 'error'));
 
   store.subscribe(() => {
     refreshWorld();

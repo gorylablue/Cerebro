@@ -4,6 +4,6 @@
   "type": "module",
   "description": "El Cerebro: centro de operaciones personal. Sitio estático sin paso de compilación.",
   "scripts": {
-    "test": "node tests/trading.test.js && node tests/goals.test.js"
+    "test": "node tests/trading.test.js && node tests/goals.test.js && node tests/sync.test.js"
   }
 }

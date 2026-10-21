@@ -5,6 +5,7 @@ import { STORES } from '../data/db.js';
 import { buildBackup, restoreBackup, validateBackup, countRecords, toCSV, deliverFile, stamp } from '../data/backup.js';
 import { esc, fmtDateTime, relativeTime } from '../logic/util.js';
 import { icon, toast, withSave, confirmAction } from './components.js';
+import { getSyncKey, setSyncKey, getSyncStatus, syncNow } from '../data/sync.js';
 
 const CSV_TABLES = [
   ['goals', 'Objetivos'], ['updates', 'Updates / Daily Log'], ['trades', 'Operaciones de trading'],
@@ -79,6 +80,23 @@ export function renderDataPage(view) {
       <p class="hint">Recomendación: un respaldo por semana, y siempre antes de borrar datos de Safari o cambiar de dispositivo.</p>
     </section>
 
+    <section class="card" data-sync-card>
+      <h2>Copia privada para la revisión de Claude</h2>
+      <p>Cuando está activa, cada cambio envía una copia de tus datos a tu repositorio privado de GitHub, a través de tu Netlify. Claude la lee cada 2 horas para analizar tu bitácora y tus objetivos.</p>
+      <dl class="kv">
+        <dt>Estado</dt><dd data-sync-status>—</dd>
+      </dl>
+      <div class="field" style="margin:12px 0">
+        <label class="label" for="sync-key">Clave de sincronización</label>
+        <input type="password" id="sync-key" autocomplete="off" autocapitalize="off" placeholder="La misma que pusiste en Netlify (CEREBRO_SYNC_KEY)" value="${esc(getSyncKey())}">
+        <small class="hint">Se guarda solo en este dispositivo. No va en los respaldos ni en la copia.</small>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" data-sync-save>${getSyncKey() ? 'Guardar y enviar ahora' : 'Activar'}</button>
+        ${getSyncKey() ? '<button class="btn btn-ghost" data-sync-off>Desactivar</button>' : ''}
+      </div>
+    </section>
+
     <section class="card card-danger">
       <h2>Borrar todos los datos</h2>
       <p>Elimina todo lo guardado en este dispositivo. Exporta un respaldo antes.</p>
@@ -99,6 +117,28 @@ export function renderDataPage(view) {
       if (est?.usage != null) uEl.textContent = `${(est.usage / 1024 / 1024).toFixed(2)} MB`;
     } catch { pEl.textContent = 'No disponible.'; }
   })();
+
+  const paintSync = () => {
+    const el = view.querySelector('[data-sync-status]');
+    if (!el) return;
+    const st = getSyncStatus();
+    el.innerHTML = !getSyncKey() ? 'Desactivada'
+      : !st ? 'Activada · pendiente del primer envío'
+        : st.ok ? `<span class="pos">Activa</span> · última copia ${esc(relativeTime(st.at))} (${esc(fmtDateTime(st.at))})`
+          : `<span class="neg">Error</span> · ${esc(st.error || '')} (${esc(relativeTime(st.at))})`;
+  };
+  paintSync();
+  view.querySelector('[data-sync-save]').onclick = async (e) => {
+    const key = view.querySelector('#sync-key').value.trim();
+    if (key.length < 8) { toast('La clave debe tener al menos 8 caracteres.', 'error'); return; }
+    setSyncKey(key);
+    e.target.disabled = true; e.target.textContent = 'Enviando…';
+    const r = await syncNow({ key });
+    toast(r.ok ? 'Copia enviada. Claude ya puede leerla.' : `No se pudo enviar: ${r.error}`, r.ok ? 'ok' : 'error');
+    renderDataPage(view);
+  };
+  const off = view.querySelector('[data-sync-off]');
+  if (off) off.onclick = () => { setSyncKey(''); toast('Copia privada desactivada.'); renderDataPage(view); };
 
   view.querySelector('[data-export-json]').onclick = async () => {
     const backup = buildBackup();
