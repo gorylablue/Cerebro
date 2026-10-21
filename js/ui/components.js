@@ -2,6 +2,7 @@
 
 import { esc, toLocalInput, fromLocalInput } from '../logic/util.js';
 import * as store from '../data/store.js';
+import { dismissGesture } from './motion.js';
 
 // ---------- Avisos (toasts) ----------
 export function toast(message, kind = 'ok') {
@@ -14,7 +15,7 @@ export function toast(message, kind = 'ok') {
   requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => {
     el.classList.remove('show');
-    setTimeout(() => el.remove(), 300);
+    setTimeout(() => el.remove(), 450);
   }, kind === 'error' ? 6000 : 2200);
 }
 
@@ -54,6 +55,7 @@ export function openModal({ title, body, footer = '', size = '', onClose }) {
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   function close() {
     document.removeEventListener('keydown', onKey);
+    wrap.style.opacity = '';
     wrap.classList.remove('show');
     setTimeout(() => {
       wrap.remove();
@@ -63,6 +65,12 @@ export function openModal({ title, body, footer = '', size = '', onClose }) {
   }
   document.addEventListener('keydown', onKey);
   wrap.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', close));
+  // Se cierra arrastrando la cabecera hacia abajo, como las hojas de iOS.
+  dismissGesture({
+    target: wrap.querySelector('.modal'), handle: wrap.querySelector('.modal-head'), axis: () => 'y', sign: 1,
+    onProgress: (p) => { wrap.style.opacity = String(1 - p * 0.7); },
+    onDismiss: close,
+  });
   return { el: wrap, body: bodyEl, close };
 }
 

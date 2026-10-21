@@ -52,6 +52,7 @@ js/logic/               LÓGICA: cálculos sin interfaz (se pueden probar y reut
 js/ui/                  INTERFAZ: pantallas y componentes
   office.js             La escena isométrica del trading floor (SVG generado en código)
   hud.js                Paneles de objetivos pendientes, operaciones abiertas y calendario económico
+  motion.js             Gestos y resortes estilo iOS: cerrar deslizando, impulso y rebote (skill apple-design)
 tests/trading.test.js   Pruebas de los cálculos (node tests/trading.test.js)
 sw.js                   Copia de la app para abrir sin conexión
 ```
@@ -64,6 +65,8 @@ sw.js                   Copia de la app para abrir sin conexión
 - **Si cambias archivos, sube el número de `CACHE` en `sw.js`** (por ejemplo `cerebro-v3` → `cerebro-v4`). Así la app instalada descarga la versión nueva.
 
 ## Navegación
+
+- Prioridades, el panel de un departamento y las ventanas se cierran deslizando con el dedo (hacia la izquierda, hacia abajo o hacia la derecha según dónde estén). Un toque rápido basta; si sueltas antes de tiempo, vuelven a su sitio con un pequeño rebote.
 
 - La oficina se dibuja una sola vez y nunca se desmonta.
 - Los departamentos, el Daily Log y Datos se abren en un panel encima de la oficina.

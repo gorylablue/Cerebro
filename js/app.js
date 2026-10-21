@@ -19,6 +19,7 @@ import { renderDept } from './ui/departments.js';
 import { renderOpenTrades, tickOpenTrades, renderCalendar, renderPendingGoals } from './ui/hud.js';
 import { openTradeEditor } from './ui/dept-trading.js';
 import { applyPacks } from './data/seed.js';
+import { dismissGesture, clearDrag } from './ui/motion.js';
 
 const view = document.getElementById('view');
 const topbar = document.getElementById('topbar');
@@ -61,9 +62,19 @@ function buildDrawer() {
       <div class="drawer-body"></div>
     </aside>`;
   drawer.querySelectorAll('[data-close-drawer]').forEach((b) => b.addEventListener('click', () => setDrawer(false)));
+  // Se cierra deslizando hacia la izquierda; el fondo se aclara al ritmo del dedo.
+  const scrim = drawer.querySelector('.drawer-scrim');
+  dismissGesture({
+    target: drawer.querySelector('.drawer-panel'), axis: () => 'x', sign: -1, enabled: drawerOpen,
+    onProgress: (p) => { scrim.style.opacity = String(1 - p); },
+    onDismiss: () => setDrawer(false),
+  });
 }
 function setDrawer(open) {
-  if (open) renderGoalList(drawer.querySelector('.drawer-body'));
+  const dPanel = drawer.querySelector('.drawer-panel');
+  const scrim = drawer.querySelector('.drawer-scrim');
+  if (open) { clearDrag(dPanel); scrim.style.opacity = ''; renderGoalList(drawer.querySelector('.drawer-body')); }
+  else setTimeout(() => { if (!drawerOpen()) { clearDrag(dPanel); scrim.style.opacity = ''; } }, 450);
   drawer.classList.toggle('open', open);
   drawer.setAttribute('aria-hidden', String(!open));
   if (open) drawer.querySelector('.drawer-close').focus({ preventScroll: true });
@@ -97,6 +108,12 @@ function buildWorld() {
   tradesHud = view.querySelector('#hud-trades');
   goalsHud = view.querySelector('#hud-goals');
   panel.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', goHome));
+  // Agarrando la barra superior del panel: hacia abajo cuando es hoja inferior, hacia la derecha cuando es lateral.
+  const sheet = matchMedia('(orientation: portrait), (max-width: 699px)');
+  dismissGesture({
+    target: panel, handle: panel.querySelector('.panel-bar'), axis: () => (sheet.matches ? 'y' : 'x'), sign: 1,
+    enabled: () => panel.classList.contains('open'), onDismiss: goHome,
+  });
 
   renderOffice(floor, { summaries: deptSummaries(), onSelect: (id) => { location.hash = `#/dept/${id}`; } });
   renderCalendar(view.querySelector('#hud-cal'), { startOpen: false });
@@ -145,6 +162,7 @@ function openPanel(key, { title, color, deptId }) {
   panel.hidden = false;
   panel.setAttribute('aria-hidden', 'false');
   clearTimeout(panel._hideT);
+  clearDrag(panel);
   panelKey = key;
   requestAnimationFrame(() => {
     panel.classList.add('open');
@@ -164,7 +182,7 @@ function closePanel() {
   panelKey = '';
   requestAnimationFrame(() => cameraTo(floor, 'overview', { duration: 700, onDone: () => placeLabels(floor) }));
   panel._hideT = setTimeout(() => {
-    if (!panel.classList.contains('open')) { panel.hidden = true; panelBody.innerHTML = ''; }
+    if (!panel.classList.contains('open')) { panel.hidden = true; panelBody.innerHTML = ''; clearDrag(panel); }
   }, 450);
 }
 

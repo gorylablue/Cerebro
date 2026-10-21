@@ -710,3 +710,74 @@ body.panel-open .hud, body.panel-open .phone-depts { opacity: 0; visibility: hid
 
 .office .hit { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .office .hit:active { fill: rgba(255, 255, 255, .04); }
+
+/* ================== 10. Movimiento y materiales estilo iOS (skill apple-design) ==================
+   Respuesta al bajar el dedo, hojas que se cierran deslizando, materiales translúcidos
+   y curvas de movimiento como las de iPadOS. Los gestos están en js/ui/motion.js. */
+:root { --ease-ios: cubic-bezier(.32, .72, 0, 1); }
+
+/* Respuesta inmediata: se ve al tocar, no al soltar */
+.icon-btn, .fchip, .seg, .panel-back, .hud-more, .cal-item, .tab, .top-btn,
+.phone-dept, .note-card, .post-card, .goal-check, .pg-check { transition: transform .1s ease-out, background-color .15s, border-color .15s, color .15s; }
+.icon-btn:active, .fchip:active, .seg:active, .panel-back:active, .hud-more:active, .cal-item:active, .top-btn:active { transform: scale(.95); }
+.phone-dept:active, .note-card:active, .post-card:active { transform: scale(.98); }
+.goal-check:active, .pg-check:active { transform: scale(.88); }
+.goal-main:active, .pg-main:active, .hist-btn:active, .log-btn:active, .tab:active { background-color: rgba(255, 255, 255, .06); }
+.btn { transition: background .15s, border-color .15s, transform .1s ease-out; }
+.btn:active { transform: scale(.96); }
+
+/* Materiales: superficies grandes más "gruesas" (más desenfoque y sombra) que las pequeñas */
+.topbar { -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%); background: rgba(9, 13, 20, .72); }
+.panel {
+  background: rgba(12, 17, 28, .8);
+  -webkit-backdrop-filter: blur(30px) saturate(160%); backdrop-filter: blur(30px) saturate(160%);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .09);
+}
+.drawer-panel {
+  background: rgba(13, 18, 28, .8);
+  -webkit-backdrop-filter: blur(26px) saturate(160%); backdrop-filter: blur(26px) saturate(160%);
+  border-right: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 20px 0 60px rgba(0, 0, 0, .45), inset -1px 0 0 rgba(255, 255, 255, .04);
+  touch-action: pan-y; /* el dedo de lado cierra; de arriba a abajo sigue siendo scroll */
+}
+.modal { box-shadow: 0 30px 80px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .07); }
+
+/* Curvas de iOS; entra y sale por el mismo camino */
+.panel { transition: opacity .3s ease, transform .5s var(--ease-ios); }
+.drawer-panel { transition: transform .45s var(--ease-ios); }
+.drawer-scrim { transition: opacity .35s ease; }
+.drawer { transition: visibility 0s linear .45s; }
+.modal-backdrop { transition: opacity .3s ease; }
+.modal { transition: transform .45s var(--ease-ios); transform: translateY(24px) scale(.97); }
+.toast { transform: translateY(16px) scale(.96); transition: opacity .25s ease, transform .45s var(--ease-ios); }
+
+/* Agarraderas: muestran que se puede deslizar */
+.modal-head, .panel-bar { position: relative; touch-action: none; }
+.modal-head::before {
+  content: ""; position: absolute; left: 50%; top: 6px; width: 36px; height: 5px; margin-left: -18px;
+  border-radius: 3px; background: rgba(255, 255, 255, .22);
+}
+.modal-head { padding-top: 18px; }
+@media (orientation: portrait), (max-width: 699px) {
+  .panel-bar { padding-top: 18px; }
+  .panel-bar::after {
+    content: ""; position: absolute; left: 50%; top: 7px; width: 40px; height: 5px; margin-left: -20px;
+    border-radius: 3px; background: rgba(255, 255, 255, .24);
+  }
+}
+
+/* Tipografía: más apretada mientras más grande; las etiquetas pequeñas, más abiertas */
+.page-head h1 { letter-spacing: -.02em; }
+.modal-head h2 { letter-spacing: -.01em; }
+.brand-text strong { letter-spacing: -.01em; }
+
+/* Accesibilidad: menos transparencia o más contraste si el iPad lo pide */
+@media (prefers-reduced-transparency: reduce) {
+  .topbar, .panel, .drawer-panel { background: #0d121c; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  .panel, .drawer-panel, .modal { border-color: rgba(255, 255, 255, .45); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel, .drawer-panel, .modal, .toast { transition: opacity .2s ease !important; }
+}
