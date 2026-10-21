@@ -2,6 +2,8 @@
 [build]
   publish = "."
   command = ""
+  # Ahorro de créditos: solo publica la rama main y solo si cambió la app (no notas, skills ni pruebas).
+  ignore = "[ \"$BRANCH\" != \"main\" ] || git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)*.md' ':(exclude).claude' ':(exclude)tests'"
 
 # Función privada que guarda la copia para la revisión de Claude.
 [functions]
