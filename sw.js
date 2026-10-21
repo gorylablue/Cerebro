@@ -2,7 +2,7 @@
 // Estrategia "red primero": con internet siempre carga la versión más reciente;
 // sin internet usa la última copia guardada. Tus DATOS no pasan por aquí (están en IndexedDB).
 
-const CACHE = 'cerebro-v10';
+const CACHE = 'cerebro-v11';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/app.js', './js/config.js',
@@ -10,7 +10,7 @@ const SHELL = [
   './js/logic/util.js', './js/logic/trading.js', './js/logic/summary.js', './js/logic/goals.js',
   './js/ui/components.js', './js/ui/goals.js', './js/ui/update.js', './js/ui/log.js',
   './js/ui/office.js', './js/ui/data-page.js', './js/ui/departments.js',
-  './js/ui/dept-trading.js', './js/ui/dept-mapa.js', './js/ui/dept-uni.js', './js/ui/hud.js', './js/ui/motion.js',
+  './js/ui/dept-trading.js', './js/ui/dept-mapa.js', './js/ui/dept-uni.js', './js/ui/hud.js', './js/ui/motion.js', './js/ui/boards.js',
   './icons/icon-192.png', './icons/apple-touch-icon.png',
 ];
 

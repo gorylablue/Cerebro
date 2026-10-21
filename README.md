@@ -80,6 +80,12 @@ sw.js                   Copia de la app para abrir sin conexión
 - La clave de sincronización se guarda solo en el dispositivo (Datos → Copia privada) y no viaja en los respaldos.
 - Sin cambios no se crea una copia nueva; cada copia queda en el historial del repositorio.
 
+## Pizarras de Trading
+
+- En la pared de Trading hay tres pizarras que se pueden tocar: **OPERACIONES ABIERTAS**, **GRÁFICA** y **CALENDARIO** (`js/ui/office.js`, `BOARDS`).
+- Cada una abre un panel flotante (`js/ui/boards.js`). En iPad vertical y teléfono se abre como hoja inferior, y en el teléfono también desde botones debajo de los departamentos.
+- GRÁFICA abre la gráfica en TradingView: primero los símbolos de tu diario y después algunos habituales.
+
 ## Calendario económico
 
 - Se usa el widget oficial y gratuito de TradingView.

@@ -186,11 +186,14 @@ function walls(sum) {
       <clipPath id="clipLedB"><rect x="0" y="104" width="1000" height="32"/></clipPath>
       <g clip-path="url(#clipLedB)"><g class="led-scroll" data-led="b" data-len="1000"><text x="1000" y="127" class="led">${esc(sum.ledBack)}</text></g></g>
       <rect x="0" y="103" width="1000" height="2" fill="#f2b544" opacity=".5"/><rect x="0" y="136" width="1000" height="2" fill="#f2b544" opacity=".5"/>
-      <!-- Pantallas de mercados en la esquina -->
-      <rect x="26" y="150" width="250" height="88" rx="4" fill="#05080e" stroke="#f2b544" stroke-opacity=".55" stroke-width="2"/>
-      <text x="40" y="176" class="wall-title" fill="#f2b544">TRADING</text>
-      <g transform="translate(40 184)">${screenContent('chart', 120, 46, rng(5), '#f2b544')}</g>
-      <polyline points="170,226 186,214 200,219 214,200 230,206 246,188 262,194" fill="none" stroke="#39d0ff" stroke-width="2.5" class="draw-line"/>
+      <!-- Pizarras de Trading (se pueden tocar): GRÁFICA y CALENDARIO -->
+      <rect x="26" y="150" width="116" height="88" rx="4" fill="#05080e" stroke="#3fd68b" stroke-width="2" class="board" style="--g:#3fd68b"/>
+      <text x="36" y="174" class="wall-title board-title" fill="#3fd68b">GRÁFICA</text>
+      <polyline points="36,222 50,212 62,216 74,200 88,206 102,190 116,196 130,182" fill="none" stroke="#3fd68b" stroke-width="2.5" class="draw-line"/>
+      <text x="132" y="233" text-anchor="end" class="board-sub">TradingView ›</text>
+      <rect x="152" y="150" width="124" height="88" rx="4" fill="#05080e" stroke="#f2b544" stroke-width="2" class="board" style="--g:#f2b544"/>
+      <text x="162" y="174" class="wall-title board-title" fill="#f2b544">CALENDARIO</text>
+      ${[0, 1].map((row) => [0, 1, 2, 3, 4].map((c) => `<rect x="${162 + c * 21}" y="${186 + row * 22}" width="16" height="16" rx="2" fill="${row === 0 && c === 2 ? '#ff5a6a' : row === 1 && c === 4 ? '#f2b544' : '#1d2636'}" stroke="#2c3953"/>`).join('')).join('')}
       <!-- Pizarra de Universidad -->
       <rect x="690" y="148" width="250" height="84" rx="3" fill="#e9eef5"/>
       <rect x="690" y="232" width="250" height="5" fill="#9aa6bd"/>
@@ -214,10 +217,10 @@ function walls(sum) {
         <text x="330" y="202" text-anchor="middle" class="bb-text bb3 bb-small" fill="#f2b544">TU MARCA EN EL MAPA</text>
       </g>
       <rect x="110" y="146" width="440" height="94" rx="4" fill="url(#gLedDots)"/>
-      <!-- Pantallas de mercados en la esquina -->
-      <rect x="724" y="150" width="250" height="88" rx="4" fill="#05080e" stroke="#39d0ff" stroke-opacity=".5" stroke-width="2"/>
-      <text x="738" y="176" class="wall-title" fill="#39d0ff">MERCADOS</text>
-      <g transform="translate(738 184)">${screenContent('chart', 120, 46, rng(17), '#39d0ff')}</g>
+      <!-- Pizarra de Trading (se puede tocar): OPERACIONES ABIERTAS -->
+      <rect x="764" y="150" width="210" height="88" rx="4" fill="#05080e" stroke="#39d0ff" stroke-width="2" class="board" style="--g:#39d0ff"/>
+      <text x="776" y="174" class="wall-title board-title board-title-long" fill="#39d0ff">OPERACIONES ABIERTAS</text>
+      <g transform="translate(778 186) scale(.72)">${screenContent('chart', 120, 46, rng(17), '#39d0ff')}</g>
       <polyline points="868,224 884,218 900,222 916,206 932,210 948,196 962,200" fill="none" stroke="#3fd68b" stroke-width="2.5" class="draw-line" style="animation-delay:-3s"/>
       <rect x="0" y="${HW - 12}" width="1000" height="12" fill="#0b1019"/>
     </g>`;
@@ -427,6 +430,18 @@ const DEFS = `<defs>
   <radialGradient id="gVignette" cx=".5" cy=".42" r=".7"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
 </defs>`;
 
+// Zonas táctiles de las tres pizarras (un poco más grandes que la pizarra, para tocarlas con el dedo).
+export const BOARDS = {
+  trades: { label: 'Operaciones abiertas', wall: 'left', x: 764, w: 210 },
+  chart: { label: 'Gráfica en TradingView', wall: 'back', x: 26, w: 116 },
+  calendar: { label: 'Calendario económico', wall: 'back', x: 152, w: 124 },
+};
+function boardHits() {
+  return Object.entries(BOARDS).map(([id, b]) => `<g transform="${b.wall === 'left' ? mX(0, 1000, HW) : mY(0, 0, HW)}">
+    <rect class="board-hit" data-board="${id}" role="button" aria-label="${esc(b.label)}" x="${b.x - 6}" y="142" width="${b.w + 12}" height="104" rx="8" fill="transparent"/>
+  </g>`).join('');
+}
+
 function buildScene(sum) {
   const items = [];
   tradingZone(items);
@@ -445,7 +460,7 @@ function buildScene(sum) {
     ${floor()}
     ${walls(sum)}
     ${body}
-    <g class="hit-layer">${hits}</g>`;
+    <g class="hit-layer">${hits}${boardHits()}</g>`;
 }
 
 // ---------- API pública ----------
@@ -463,7 +478,7 @@ function labelHtml(id, s) {
   </button>`;
 }
 
-export function renderOffice(container, { summaries = {}, onSelect }) {
+export function renderOffice(container, { summaries = {}, onSelect, onBoard }) {
   const sum = officeTexts(summaries);
   container.innerHTML = `<div class="scene">
     <svg class="office" viewBox="${VB.x} ${VB.y} ${VB.w} ${VB.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Trading floor con los departamentos En El Mapa, Trading y Universidad">${buildScene(sum)}</svg>
@@ -471,6 +486,8 @@ export function renderOffice(container, { summaries = {}, onSelect }) {
   </div>`;
   const svg = container.querySelector('svg');
   svg.addEventListener('click', (e) => {
+    const board = e.target.closest('[data-board]');
+    if (board) { onBoard?.(board.dataset.board, board.getBoundingClientRect()); return; }
     const g = e.target.closest('[data-zone]');
     if (g) onSelect?.(g.dataset.zone);
   });

@@ -16,7 +16,8 @@ import { renderLog } from './ui/log.js';
 import { renderDataPage, backupAgeDays } from './ui/data-page.js';
 import { renderOffice, updateOffice, placeLabels, pingZone, cameraTo, refitCamera, introCamera } from './ui/office.js';
 import { renderDept } from './ui/departments.js';
-import { renderOpenTrades, tickOpenTrades, renderCalendar, renderPendingGoals } from './ui/hud.js';
+import { renderCalendar, renderPendingGoals, openTrades } from './ui/hud.js';
+import { createBoardPanel } from './ui/boards.js';
 import { openTradeEditor } from './ui/dept-trading.js';
 import { applyPacks } from './data/seed.js';
 import { dismissGesture, clearDrag } from './ui/motion.js';
@@ -83,15 +84,14 @@ function setDrawer(open) {
 const drawerOpen = () => drawer.classList.contains('open');
 
 // ---------- La oficina (persistente) ----------
-let tradesHud, goalsHud;
+let goalsHud, boards;
 function buildWorld() {
   view.innerHTML = `
     <div class="home" id="world">
       <section class="stage" aria-label="Trading floor"><div class="floor" id="floor"></div></section>
       <nav class="phone-depts" aria-label="Departamentos"></nav>
       <aside class="hud hud-goals" id="hud-goals" aria-label="Objetivos pendientes"></aside>
-      <aside class="hud hud-trades" id="hud-trades" aria-label="Operaciones abiertas"></aside>
-      <aside class="hud hud-cal" id="hud-cal" aria-label="Calendario económico"></aside>
+      <nav class="phone-boards" aria-label="Trading"></nav>
     </div>
     <section class="panel" id="panel" hidden aria-hidden="true">
       <header class="panel-bar">
@@ -106,7 +106,6 @@ function buildWorld() {
   panel = view.querySelector('#panel');
   panelBody = view.querySelector('#panel-body');
   panelTitle = view.querySelector('#panel-title');
-  tradesHud = view.querySelector('#hud-trades');
   goalsHud = view.querySelector('#hud-goals');
   panel.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', goHome));
   // Agarrando la barra superior del panel: hacia abajo cuando es hoja inferior, hacia la derecha cuando es lateral.
@@ -116,8 +115,14 @@ function buildWorld() {
     enabled: () => panel.classList.contains('open'), onDismiss: goHome,
   });
 
-  renderOffice(floor, { summaries: deptSummaries(), onSelect: (id) => { location.hash = `#/dept/${id}`; } });
-  renderCalendar(view.querySelector('#hud-cal'), { startOpen: false });
+  // Las pizarras de Trading (Operaciones abiertas, Gráfica y Calendario) abren su panel flotante.
+  boards = createBoardPanel(world);
+  renderOffice(floor, { summaries: deptSummaries(), onSelect: (id) => { location.hash = `#/dept/${id}`; }, onBoard: (k, rect) => boards.open(k, rect) });
+  // En el teléfono las pizarras son muy pequeñas: los mismos paneles se abren con estos botones.
+  view.querySelector('.phone-boards').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-open-board]');
+    if (b) boards.open(b.dataset.openBoard, null);
+  });
   refreshWorld();
 
   let t;
@@ -125,13 +130,17 @@ function buildWorld() {
     clearTimeout(t);
     t = setTimeout(() => refitCamera(floor, current.name === 'home' ? null : visibleRect()), 60);
   }).observe(floor);
-  setInterval(() => tickOpenTrades(tradesHud), 60000);
 }
 
 function refreshWorld() {
   const s = deptSummaries();
   updateOffice(floor, s);
-  renderOpenTrades(tradesHud);
+  boards.refresh();
+  const n = openTrades().length;
+  view.querySelector('.phone-boards').innerHTML = `
+    <button class="phone-board" data-open-board="trades" style="--g:#39d0ff"><i></i>Operaciones abiertas<span>${n}</span></button>
+    <button class="phone-board" data-open-board="calendar" style="--g:#f2b544"><i></i>Calendario</button>
+    <button class="phone-board" data-open-board="chart" style="--g:#3fd68b"><i></i>Gráfica</button>`;
   renderPendingGoals(goalsHud, { onShowAll: () => setDrawer(true) });
   view.querySelector('.phone-depts').innerHTML = DEPT_IDS.map((id) => `
     <a class="phone-dept" href="#/dept/${id}" style="--dc:${DEPTS[id].color}">
@@ -156,6 +165,7 @@ function visibleRect() {
 // ---------- Panel de departamento / Daily Log / Datos ----------
 let panelKey = '';
 function openPanel(key, { title, color, deptId }) {
+  boards?.close();
   const sameKey = !panel.hidden && panel.classList.contains('open') && panelKey === key;
   panelTitle.innerHTML = title;
   panel.style.setProperty('--dc', color || 'var(--accent)');
@@ -288,10 +298,11 @@ async function boot() {
     .catch((err) => { console.error(err); toast('No se pudieron añadir las novedades', 'error'); });
   window.addEventListener('hashchange', route);
   window.addEventListener('cerebro:update-saved', (e) => pingZone(floor, e.detail.dept));
-  window.addEventListener('online', () => { const c = document.getElementById('hud-cal'); if (c?.querySelector('.hud-empty')) renderCalendar(c); });
+  window.addEventListener('online', () => { const c = document.querySelector('.bp-layer[data-kind="calendar"] .bp-body'); if (c?.querySelector('.hud-empty')) renderCalendar(c, { docked: true }); });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || document.getElementById('modal-root').children.length) return;
     if (drawerOpen()) setDrawer(false);
+    else if (boards?.isOpen()) boards.close();
     else if (current.name !== 'home') goHome();
   });
   // Cualquier error inesperado se avisa; la X del panel y el logo siguen llevando a la oficina.

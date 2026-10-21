@@ -9,7 +9,7 @@ import { topPendingGoals } from '../logic/goals.js';
 import { dept } from '../config.js';
 import { dueLabel, dueClass, fmtClock } from '../logic/util.js';
 
-// ---------- Objetivos pendientes (máximo tres, por prioridad) ----------
+// ---------- Objetivos pendientes (máximo tres, por fecha de entrega) ----------
 const PRIO_LABEL = { alta: 'Alta', media: 'Media', baja: 'Baja' };
 export function renderPendingGoals(el, { onShowAll } = {}) {
   const all = store.list('goals').filter((g) => g.status !== 'completado');
@@ -131,19 +131,23 @@ export function calendarConfig(p) {
 
 let calOpen = null;
 let prefsOpen = false;
-export function renderCalendar(el, { startOpen = false } = {}) {
+// docked: dentro del panel de la pizarra CALENDARIO (siempre abierto; el panel tiene su propio cierre).
+export function renderCalendar(el, { startOpen = false, docked = false } = {}) {
   if (calOpen === null) calOpen = startOpen;
+  if (docked) calOpen = true;
   el.classList.toggle('expanded', !!calOpen);
   const p = prefs();
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
   el.innerHTML = `
     <header class="hud-head">
-      <button class="hud-toggle" data-cal-toggle aria-expanded="${calOpen}">
+      ${docked
+        ? `<span class="hud-toggle"><span class="hud-sub">${esc(IMPACTS[p.impact].label)} · ${esc(p.currencies.join(', '))}</span></span>`
+        : `<button class="hud-toggle" data-cal-toggle aria-expanded="${calOpen}">
         <span class="hud-title"><i class="hud-dot" style="--c:#ff5a6a"></i>Calendario económico</span>
         <span class="hud-sub">${esc(IMPACTS[p.impact].label)} · ${esc(p.currencies.join(', '))}</span>
-      </button>
-      ${calOpen ? `<button class="icon-btn hud-gear" data-cal-prefs aria-label="Ajustes del calendario">${icon('edit')}</button>` : ''}
-      <button class="icon-btn" data-cal-toggle aria-label="${calOpen ? 'Ocultar' : 'Mostrar'} calendario">${icon(calOpen ? 'x' : 'chevron')}</button>
+      </button>`}
+      ${calOpen ? `<button class="icon-btn hud-gear" data-cal-prefs aria-label="Filtros del calendario">${icon('edit')}</button>` : ''}
+      ${docked ? '' : `<button class="icon-btn" data-cal-toggle aria-label="${calOpen ? 'Ocultar' : 'Mostrar'} calendario">${icon(calOpen ? 'x' : 'chevron')}</button>`}
     </header>
     ${calOpen ? `
       <div class="cal-prefs" ${prefsOpen ? '' : 'hidden'}>
@@ -162,7 +166,7 @@ export function renderCalendar(el, { startOpen = false } = {}) {
   el.querySelector('[data-cal-prefs]').onclick = () => { prefsOpen = prefsEl.hidden; prefsEl.hidden = !prefsOpen; };
   const savePrefs = async (next) => {
     if (!next.currencies.length) return;
-    if (await withSave(() => store.setMeta('calendarPrefs', { currencies: next.currencies, impact: next.impact }), null)) renderCalendar(el);
+    if (await withSave(() => store.setMeta('calendarPrefs', { currencies: next.currencies, impact: next.impact }), null)) renderCalendar(el, { docked });
   };
   el.querySelectorAll('[data-cur]').forEach((b) => b.onclick = () => {
     const c = b.dataset.cur;

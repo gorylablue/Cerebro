@@ -4,6 +4,7 @@ import * as store from '../data/store.js';
 import { DEPTS, DEPT_IDS, GENERAL, dept, PRIORITIES, PRIORITY_RANK, STATUSES, statusLabel } from '../config.js';
 import { esc, dueLabel, dueClass, fmtClock } from '../logic/util.js';
 import { openEditor, withSave, icon, emptyState } from './components.js';
+import { sortByDue } from '../logic/goals.js';
 
 export const GOAL_FIELDS = [
   { name: 'title', label: 'Nombre', type: 'text', required: true, wide: true, placeholder: 'Ej.: Perfeccionar la página web' },
@@ -17,12 +18,9 @@ export const GOAL_FIELDS = [
   { name: 'notes', label: 'Notas (opcional)', type: 'textarea', wide: true },
 ];
 
+// Por fecha de entrega (la más cercana primero; sin fecha al final). Ver js/logic/goals.js.
 export function sortGoals(goals) {
-  return [...goals].sort((a, b) =>
-    (PRIORITY_RANK[a.priority] ?? 1) - (PRIORITY_RANK[b.priority] ?? 1)
-    || (a.status === 'progreso' ? -1 : 0) - (b.status === 'progreso' ? -1 : 0)
-    || (a.due || '9999').localeCompare(b.due || '9999')
-    || (a.createdAt || '').localeCompare(b.createdAt || ''));
+  return sortByDue(goals);
 }
 
 export function activeGoals(deptId) {
@@ -76,8 +74,6 @@ export function renderGoalList(el, { deptId = null, title = 'Prioridades' } = {}
   const active = sortGoals(all.filter((g) => g.status !== 'completado'));
   const done = all.filter((g) => g.status === 'completado')
     .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
-  const top = active.filter((g) => g.priority === 'alta');
-  const rest = active.filter((g) => g.priority !== 'alta');
 
   el.innerHTML = `
     <div class="panel-head">
@@ -85,8 +81,7 @@ export function renderGoalList(el, { deptId = null, title = 'Prioridades' } = {}
       <button class="btn btn-small" data-new-goal>${icon('plus')} Objetivo</button>
     </div>
     ${active.length === 0 ? emptyState(done.length ? 'Todo completado' : 'Aún no hay objetivos', 'Crea un objetivo para tenerlo siempre a la vista.') : ''}
-    ${top.length ? `<ul class="goal-list goal-list-top">${top.map(goalItem).join('')}</ul>` : ''}
-    ${rest.length ? `${top.length ? '<p class="list-label">Secundarios</p>' : ''}<ul class="goal-list">${rest.map(goalItem).join('')}</ul>` : ''}
+    ${active.length ? `<ul class="goal-list">${active.map(goalItem).join('')}</ul>` : ''}
     ${done.length ? `<details class="done-block"><summary>Completados (${done.length})</summary><ul class="goal-list">${done.slice(0, 30).map(goalItem).join('')}</ul></details>` : ''}`;
 
   el.querySelector('[data-new-goal]').onclick = () => openGoalEditor(null, deptId ? { dept: deptId } : {});

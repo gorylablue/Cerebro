@@ -781,3 +781,64 @@ body.panel-open .hud, body.panel-open .phone-depts { opacity: 0; visibility: hid
 @media (prefers-reduced-motion: reduce) {
   .panel, .drawer-panel, .modal, .toast { transition: opacity .2s ease !important; }
 }
+
+/* Pizarras de Trading que se pueden tocar */
+.office .board { stroke-opacity: .85; animation: boardglow 3.6s ease-in-out infinite; }
+.office .board-title { font-size: 13px; letter-spacing: .08em; }
+.office .board-title-long { letter-spacing: .05em; }
+.office .board-sub { font: 700 9px var(--font); fill: #9aa6bd; }
+.office .board-hit { cursor: pointer; }
+.office .board-hit:active { fill: rgba(255, 255, 255, .08); }
+@keyframes boardglow { 0%, 100% { stroke-opacity: .6; } 50% { stroke-opacity: 1; } }
+
+/* Panel de las pizarras de Trading */
+.phone-boards { display: none; }
+.bp-layer { position: absolute; inset: 0; z-index: 12; }
+.bp-layer[hidden] { display: none !important; }
+.bp-scrim { position: absolute; inset: 0; background: rgba(3, 5, 9, .25); opacity: 0; transition: opacity .25s; }
+.bp-layer.open .bp-scrim { opacity: 1; }
+.bp { position: absolute; display: flex; flex-direction: column; max-height: calc(100% - 24px); overflow: hidden;
+  background: rgba(10, 14, 23, .92); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, .12); border-radius: 18px; color: var(--text);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .6), 0 0 0 1px rgba(0, 0, 0, .4), 0 0 30px color-mix(in srgb, var(--g) 22%, transparent);
+  opacity: 0; transform: scale(.96); transition: opacity .22s ease, transform .3s cubic-bezier(.2, .7, .2, 1); }
+.bp-layer.open .bp { opacity: 1; transform: none; }
+.bp::before { content: ""; position: absolute; left: 18px; right: 18px; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--g), transparent); }
+.bp-grab { display: none; }
+.bp-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.bp-title { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; }
+.bp-title i { width: 8px; height: 8px; border-radius: 50%; background: var(--g); box-shadow: 0 0 10px var(--g); flex: none; }
+.bp-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.bp-body .hud-head { display: none; }
+.bp-layer[data-kind="calendar"] .bp-body .hud-head { display: flex; padding-top: 6px; }
+.bp-body .hud-empty .btn { display: none; }
+.bp-body .ot-list { max-height: none; }
+.bp-layer[data-kind="calendar"] .bp { height: min(640px, calc(100% - 24px)); }
+.bp-layer[data-kind="calendar"] .bp-body { display: flex; flex-direction: column; }
+.bp-layer[data-kind="calendar"] .tv-box { flex: 1 0 auto; height: auto; min-height: 380px; background: #131722; margin: 0 10px; border-radius: 12px; overflow: hidden; }
+.bp-actions { display: flex; gap: 8px; padding: 4px 10px 12px; }
+.bp-actions .btn { flex: 1; }
+.bp-arrow { position: absolute; z-index: 13; width: 16px; height: 16px; background: rgba(10, 14, 23, .95); border-left: 1px solid rgba(255, 255, 255, .12); border-bottom: 1px solid rgba(255, 255, 255, .12); transform: rotate(45deg); pointer-events: none; opacity: 0; transition: opacity .2s; }
+.bp-arrow.to-right { transform: rotate(-135deg); }
+.bp-layer.open .bp-arrow:not([hidden]) { opacity: 1; }
+.pairs { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; }
+.pair { min-height: 44px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; color: var(--text); text-decoration: none; border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .05); }
+.pair.own { background: #3fd68b; color: #06210f; border-color: #3fd68b; }
+.pair small { font-weight: 600; font-size: 11px; opacity: .75; }
+.pair:active { transform: scale(.97); }
+.pair-form { display: flex; gap: 8px; padding: 0 12px; }
+.pair-form input { flex: 1; min-width: 0; text-transform: uppercase; }
+/* Hoja inferior (iPad vertical y teléfono) */
+.bp-layer.sheet { position: fixed; z-index: 45; }
+.bp-layer.sheet .bp-scrim { background: rgba(3, 5, 9, .5); }
+.bp-layer.sheet .bp { left: 0 !important; right: 0; bottom: 0; top: auto !important; width: auto !important; max-height: 82vh; border-radius: 22px 22px 0 0; padding-bottom: var(--safe-bottom); transform: translateY(40px); }
+.bp-layer.sheet.open .bp { transform: none; }
+.bp-layer.sheet .bp-grab { display: block; width: 40px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .25); margin: 8px auto 0; flex: none; padding: 8px 40px; background-clip: content-box; box-sizing: content-box; cursor: grab; touch-action: none; }
+.bp-layer.sheet[data-kind="calendar"] .bp { height: 82vh; }
+@media (max-width: 699px) {
+  .phone-boards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .phone-board { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 64px; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); color: var(--text); font-weight: 700; font-size: 13px; text-align: left; position: relative; }
+  .phone-board i { width: 9px; height: 9px; border-radius: 50%; background: var(--g); box-shadow: 0 0 10px var(--g); }
+  .phone-board span { position: absolute; top: 8px; right: 10px; color: var(--muted); font-weight: 800; }
+  body.panel-open .phone-boards { opacity: 0; visibility: hidden; }
+}
